@@ -105,7 +105,7 @@ class App extends Component<{}, State> {
     type FilesMapType = { File: FileInfo, ProjectReferences: string[] };
     function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
       function ToDependencyMapInner(file: FileInfo): FilesMapType {
-        if(!file.Parsed.Project.ItemGroup)
+        if (!file.Parsed.Project.ItemGroup)
           return { File: file, ProjectReferences: [] }
         const references = file
           .Parsed
@@ -130,7 +130,7 @@ class App extends Component<{}, State> {
           console.error(e);
         if (r) {
           instance.setState(old => ({
-            ... old,
+            ...old,
             Files: old.Files.filter(f => f.Name !== file.name).concat({
               Name: file.name,
               Json: JSON.stringify(r, null, 2),
@@ -147,7 +147,7 @@ class App extends Component<{}, State> {
     function mapEdges(f: FilesMapType) {
       function mapReferences(r: string) {
         const fileName = r.split('\\').pop()!.split('/').pop();
-        if(!fileName)
+        if (!fileName)
           throw "fileName is null";
         return ({ from: f.File.Name, to: fileName })
       }
@@ -158,8 +158,14 @@ class App extends Component<{}, State> {
       edges: filesMap.map(mapEdges).flat(1),
     };
 
-    function onClick(){
-      instance.setState(old => ({ ... old, ShowGraph: !old.ShowGraph }));
+    function onClick() {
+      instance.setState(old => ({ ...old, ShowGraph: !old.ShowGraph }));
+    }
+
+    function deleteClicked(file: string, instance: App) {
+      return function () {
+        instance.setState(old => ({ ...old, Files: old.Files.filter(f => f.Name !== file) }));
+      }
     }
 
     return <>
@@ -180,7 +186,7 @@ class App extends Component<{}, State> {
         <tbody>
           {filesMap.map(f => <tr key={f.File.Name}>
             <td>
-              {f.File.Name}
+              <span className="del-button" onClick={deleteClicked(f.File.Name, instance)} >Delete</span>{f.File.Name}
             </td>
             <td>
               <ul>
