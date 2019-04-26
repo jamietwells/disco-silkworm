@@ -66,7 +66,8 @@ const ReadFiles = (props: { children: string, onLoad: (files: Array<{ file: File
 
 type State = {
   Files: FileInfo[],
-  ShowGraph: boolean
+  ShowGraph: boolean,
+  Hierarchical: boolean
 }
 
 type FileInfo = {
@@ -103,7 +104,7 @@ class App extends Component<{}, State> {
 
   constructor(props: {}) {
     super(props);
-    this.state = { Files: [], ShowGraph: true };
+    this.state = { Files: [], ShowGraph: true, Hierarchical: VisOptions.layout.hierarchical };
     this.accept = '.csproj,.fsproj,.proj,.vbproj'
     this.elem = null;
     this.model = null;
@@ -192,7 +193,7 @@ class App extends Component<{}, State> {
       edges: filesMap.map(mapEdges).flat(1),
     };
 
-    function onClick() {
+    function graphTableToggleClicked() {
       instance.setState(old => ({ ...old, ShowGraph: !old.ShowGraph }));
     }
 
@@ -202,10 +203,17 @@ class App extends Component<{}, State> {
       }
     }
 
+    function hierarchicalClicked() {
+      VisOptions.layout.hierarchical = !VisOptions.layout.hierarchical;
+      instance.setState(old => ({ ...old, Hierarchical: VisOptions.layout.hierarchical }));
+    }
+
     return <>
       <ReadFiles onLoad={onLoad} multiple={true} accept={this.accept}>Import Project Files</ReadFiles>
-      <button onClick={onClick}>{instance.state.ShowGraph ? "Show table" : "Show graph"}</button>
+      <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? "Show table" : "Show graph"}</button>
+      <button hidden={!instance.state.ShowGraph} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? "web layout" : "hierarchical"}</button>
       <div hidden={!instance.state.ShowGraph} className="graph" ref={r => this.elem = r}></div>
+      
       <table hidden={instance.state.ShowGraph}>
         <thead>
           <tr>
