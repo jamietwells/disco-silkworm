@@ -18,5 +18,9 @@ export const VisOptions = {
         font: {
             color: "#E0E0E0"
         }
+    },
+    layout: { 
+        improvedLayout: false,
+        hierarchical: true
     }
 } as Options;
