@@ -4,7 +4,7 @@ import * as xml from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
 
-const ReadFiles = (props: { children: string, onLoad: (file: File, content: string) => void, multiple?: boolean, accept?: string, className?: string, id?: string }) => {
+const ReadFiles = (props: { children: string, onLoad: (files: Array<{ file: File, content: string }>) => void, multiple?: boolean, accept?: string, className?: string, id?: string }) => {
   type ICollection<T> = {
     length: number;
     [index: number]: T;
@@ -25,16 +25,33 @@ const ReadFiles = (props: { children: string, onLoad: (file: File, content: stri
   }
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    if (event.currentTarget.files)
+    const results = new Array<{ file: File, content: string }>();
+
+    function loadend(file: { File: File, Reader: FileReader }, length: number) {
+      return function () {
+        results.push({
+          file: file.File,
+          content: (file.Reader.result as string)
+        });
+
+        if (length === results.length)
+          props.onLoad(results);
+        
+      }
+    }
+
+    if (event.currentTarget.files) {
+      const length = event.currentTarget.files.length;
       ToArray(event.currentTarget.files)
         .map(f => ({
           File: f,
           Reader: new FileReader()
         }))
         .forEach(i => {
-          i.Reader.addEventListener("loadend", () => props.onLoad(i.File, (i.Reader.result as string)));
+          i.Reader.addEventListener("loadend", loadend(i, length));
           i.Reader.readAsText(i.File);
         });
+    }
   }
 
   let inputElement: HTMLInputElement | null;
@@ -101,7 +118,6 @@ class App extends Component<{}, State> {
   }
 
   render() {
-
     type FilesMapType = { File: FileInfo, ProjectReferences: string[] };
     function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
       function ToDependencyMapInner(file: FileInfo): FilesMapType {
@@ -124,22 +140,40 @@ class App extends Component<{}, State> {
 
     const instance = this;
 
-    function onLoad(file: File, content: string) {
-      xml.parseString(content, (e, r) => {
-        if (e)
-          console.error(e);
-        if (r) {
-          instance.setState(old => ({
-            ...old,
-            Files: old.Files.filter(f => f.Name !== file.name).concat({
-              Name: file.name,
-              Json: JSON.stringify(r, null, 2),
-              Xml: content,
-              Parsed: r
-            })
-          }));
+    function onLoad(files: Array<{ file: File, content: string }>) {
+      const length = files.length;
+      const results: FileInfo[] = [];
+      function toXml(file: { file: File, content: string }) {
+        let faulted = 0;
+        function onParsed(error: any, result: any) {
+          function notAlreadyAdded(file: FileInfo) {
+            return files
+              .map(f => f.file.name)
+              .filter(n => n === file.Name)
+              .length === 0;
+          }
+
+          if (error)
+            faulted++;
+
+          else
+            results.push({
+              Name: file.file.name,
+              Json: JSON.stringify(result, null, 2),
+              Xml: file.content,
+              Parsed: result as ProjectFile
+            });
+
+          if (length === faulted + results.length) {
+            instance.setState(old => ({
+              ...old,
+              Files: old.Files.filter(notAlreadyAdded).concat(results)
+            }));
+          }
         }
-      });
+        xml.parseString(file.content, onParsed);
+      }
+      files.forEach(toXml);
     };
 
     const filesMap = ToDependencyMap(this.state.Files);
