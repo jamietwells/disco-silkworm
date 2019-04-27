@@ -1,68 +1,9 @@
-import React, { Component, ChangeEvent } from 'react';
+import React, { Component } from 'react';
 import * as vis from 'vis';
 import * as xml from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
-
-const ReadFiles = (props: { children: string, onLoad: (files: Array<{ file: File, content: string }>) => void, multiple?: boolean, accept?: string, className?: string, id?: string }) => {
-  type ICollection<T> = {
-    length: number;
-    [index: number]: T;
-  }
-
-  function ToArray<TItem>(collection: ICollection<TItem>) {
-    return ToArrayAny(collection, c => c.length, (c, i) => c[i]);
-  }
-
-  type LengthSelector<T> = (collection: T) => number;
-  type ItemSelector<T, TResult> = (collection: T, index: number) => TResult;
-
-  function ToArrayAny<T, TResult>(collection: T, lengthSelector: LengthSelector<T>, itemSelector: ItemSelector<T, TResult>): TResult[] {
-    const result: TResult[] = [];
-    for (let i = 0; i < lengthSelector(collection); i++)
-      result.push(itemSelector(collection, i));
-    return result;
-  }
-
-  function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const results = new Array<{ file: File, content: string }>();
-
-    function loadend(file: { File: File, Reader: FileReader }, length: number) {
-      return function () {
-        results.push({
-          file: file.File,
-          content: (file.Reader.result as string)
-        });
-
-        if (length === results.length)
-          props.onLoad(results);
-        
-      }
-    }
-
-    if (event.currentTarget.files) {
-      const length = event.currentTarget.files.length;
-      ToArray(event.currentTarget.files)
-        .map(f => ({
-          File: f,
-          Reader: new FileReader()
-        }))
-        .forEach(i => {
-          i.Reader.addEventListener("loadend", loadend(i, length));
-          i.Reader.readAsText(i.File);
-        });
-    }
-  }
-
-  let inputElement: HTMLInputElement | null;
-  return <>
-    <input type='file' id='folder' hidden={true} className='input-file hidden' accept={props.accept} onChange={handleChange} multiple={props.multiple} ref={input => inputElement = input} />
-    <button id={props.id} className={props.className} onClick={() => {
-      if (inputElement)
-        (inputElement).click();
-    }}>{props.children}</button>
-  </>;
-}
+import { ReadFiles } from './ReadFiles';
 
 type State = {
   Files: FileInfo[],
@@ -120,6 +61,7 @@ class App extends Component<{}, State> {
 
   render() {
     type FilesMapType = { File: FileInfo, ProjectReferences: string[] };
+
     function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
       function ToDependencyMapInner(file: FileInfo): FilesMapType {
         if (!file.Parsed.Project.ItemGroup)
@@ -179,15 +121,20 @@ class App extends Component<{}, State> {
 
     const filesMap = ToDependencyMap(this.state.Files);
 
+    function fileNameFromPath(path: string) {
+      return path.split('\\').pop()!.split('/').pop()!;
+    }
+
     function mapEdges(f: FilesMapType) {
       function mapReferences(r: string) {
-        const fileName = r.split('\\').pop()!.split('/').pop();
+        const fileName = fileNameFromPath(r);
         if (!fileName)
-          throw "fileName is null";
+          throw 'fileName is null';
         return ({ from: f.File.Name, to: fileName })
       }
       return f.ProjectReferences.map(mapReferences);
     }
+
     this.model = {
       nodes: filesMap.map(f => ({ id: f.File.Name, label: f.File.Name })),
       edges: filesMap.map(mapEdges).flat(1),
@@ -208,12 +155,22 @@ class App extends Component<{}, State> {
       instance.setState(old => ({ ...old, Hierarchical: VisOptions.layout.hierarchical }));
     }
 
+    function references(allFiles: FilesMapType[], file: FilesMapType): string[] {
+      return allFiles
+        .map(f => ({file: f, references: f.ProjectReferences.map(fileNameFromPath)}))
+        .filter(f => f.references.some(r => file.File.Name === r))
+        .map(f => f.file.File.Name);
+    }
+
+    const dependencyInfo = filesMap
+      .map(f => ({ ...f, ReferencedBy: references(filesMap, f)}));
+
     return <>
       <ReadFiles onLoad={onLoad} multiple={true} accept={this.accept}>Import Project Files</ReadFiles>
-      <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? "Show table" : "Show graph"}</button>
-      <button hidden={!instance.state.ShowGraph} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? "web layout" : "hierarchical"}</button>
-      <div hidden={!instance.state.ShowGraph} className="graph" ref={r => this.elem = r}></div>
-      
+      <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? 'Show table' : 'Show graph'}</button>
+      <button hidden={!instance.state.ShowGraph} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'web layout' : 'hierarchical'}</button>
+      <div hidden={!instance.state.ShowGraph} className='graph' ref={r => this.elem = r}></div>
+
       <table hidden={instance.state.ShowGraph}>
         <thead>
           <tr>
@@ -223,17 +180,37 @@ class App extends Component<{}, State> {
             <td>
               References
             </td>
+            <td>
+              Number of references
+            </td>
+            <td>
+              Referenced by
+            </td>
+            <td>
+              Number of times referenced
+            </td>
           </tr>
         </thead>
         <tbody>
-          {filesMap.map(f => <tr key={f.File.Name}>
+          {dependencyInfo.map(f => <tr key={f.File.Name}>
             <td>
-              <span className="del-button" onClick={deleteClicked(f.File.Name, instance)} >Delete</span>{f.File.Name}
+              <span className='del-button' onClick={deleteClicked(f.File.Name, instance)}>Delete</span>{f.File.Name}
             </td>
             <td>
               <ul>
-                {f.ProjectReferences.map(r => <li key={r}>{r}</li>)}
+                {f.ProjectReferences.map(fileNameFromPath).map(r => <li key={r}>{r}</li>)}
               </ul>
+            </td>
+            <td>
+              {f.ProjectReferences.length}
+            </td>
+            <td>
+              <ul>
+                {f.ReferencedBy.map(r => <li key={r}>{r}</li>)}
+              </ul>
+            </td>
+            <td>
+              {f.ReferencedBy.length}
             </td>
           </tr>)}
         </tbody>
