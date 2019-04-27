@@ -1,5 +1,5 @@
 .graph{
-  height:100vh;
+  height: 100vh;
 }
 
 button {
@@ -13,7 +13,17 @@ button {
 
 table{
   width: 100%;
-  margin: 30px;
+}
+
+.github-icon{
+  display: inline-block;
+  vertical-align: top;
+  margin: 8px 0 0 8px;
+}
+
+nav button {
+  display: inline-block;
+  vertical-align: top;
 }
 
 .del-button {
