@@ -169,11 +169,11 @@ class App extends Component<{}, State> {
       .map(f => ({ ...f, ReferencedBy: references(filesMap, f)}));
 
     const tableData = new TableData(dependencyInfo)
-      .AddColumn("File", f => <><span className='del-button' onClick={deleteClicked(f.File.Name, instance)}>Delete</span>{f.File.Name}</>)
+      .AddSortableColumn("File", f => <><span className='del-button' onClick={deleteClicked(f.File.Name, instance)}>Delete</span>{f.File.Name}</>, (a, b) => a.File.Name.localeCompare(b.File.Name))
       .AddColumn("References", f => <ul>{f.ProjectReferences.map(fileNameFromPath).map(r => <li key={r}>{r}</li>)}</ul> )
-      .AddColumn("Number of references", f => f.ProjectReferences.length)
+      .AddSortableColumn("Number of references", f => f.ProjectReferences.length)
       .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r}>{r}</li>)}</ul>)
-      .AddColumn("Number of times referenced", f => f.ReferencedBy.length);
+      .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length);
 
     return <>
       <ReadFiles onLoad={onLoad} multiple={true} accept={this.accept}>Import Project Files</ReadFiles>
