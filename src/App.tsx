@@ -4,6 +4,7 @@ import * as xml from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
 import { ReadFiles } from './ReadFiles';
+import { Table, TableData } from './Table';
 
 type State = {
   Files: FileInfo[],
@@ -96,8 +97,10 @@ class App extends Component<{}, State> {
               .length === 0;
           }
 
-          if (error)
+          if (error){
+            console.error(error);
             faulted++;
+          }
 
           else
             results.push({
@@ -165,56 +168,19 @@ class App extends Component<{}, State> {
     const dependencyInfo = filesMap
       .map(f => ({ ...f, ReferencedBy: references(filesMap, f)}));
 
+    const tableData = new TableData(dependencyInfo)
+      .AddColumn("File", f => <><span className='del-button' onClick={deleteClicked(f.File.Name, instance)}>Delete</span>{f.File.Name}</>)
+      .AddColumn("References", f => <ul>{f.ProjectReferences.map(fileNameFromPath).map(r => <li key={r}>{r}</li>)}</ul> )
+      .AddColumn("Number of references", f => f.ProjectReferences.length)
+      .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r}>{r}</li>)}</ul>)
+      .AddColumn("Number of times referenced", f => f.ReferencedBy.length);
+
     return <>
       <ReadFiles onLoad={onLoad} multiple={true} accept={this.accept}>Import Project Files</ReadFiles>
       <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? 'Show table' : 'Show graph'}</button>
       <button hidden={!instance.state.ShowGraph} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'web layout' : 'hierarchical'}</button>
       <div hidden={!instance.state.ShowGraph} className='graph' ref={r => this.elem = r}></div>
-
-      <table hidden={instance.state.ShowGraph}>
-        <thead>
-          <tr>
-            <td>
-              File
-            </td>
-            <td>
-              References
-            </td>
-            <td>
-              Number of references
-            </td>
-            <td>
-              Referenced by
-            </td>
-            <td>
-              Number of times referenced
-            </td>
-          </tr>
-        </thead>
-        <tbody>
-          {dependencyInfo.map(f => <tr key={f.File.Name}>
-            <td>
-              <span className='del-button' onClick={deleteClicked(f.File.Name, instance)}>Delete</span>{f.File.Name}
-            </td>
-            <td>
-              <ul>
-                {f.ProjectReferences.map(fileNameFromPath).map(r => <li key={r}>{r}</li>)}
-              </ul>
-            </td>
-            <td>
-              {f.ProjectReferences.length}
-            </td>
-            <td>
-              <ul>
-                {f.ReferencedBy.map(r => <li key={r}>{r}</li>)}
-              </ul>
-            </td>
-            <td>
-              {f.ReferencedBy.length}
-            </td>
-          </tr>)}
-        </tbody>
-      </table>
+      <Table {... tableData} />
     </>
   }
 }
