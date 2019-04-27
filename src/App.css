@@ -67,3 +67,12 @@ html{
   background-color: black;
   color: #F0F0FF;
 }
+
+.column-sort-btn {
+  border-radius: 20%;
+  min-width: 25px;
+  min-height: 25px;
+  padding: 0px;
+  margin: 0px;
+  margin-left: 5px;
+}

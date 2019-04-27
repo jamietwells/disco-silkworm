@@ -32,7 +32,7 @@ export class Table<T> extends React.Component<TableProps<T>, TableState<T>> {
                 column.Direction = direction === 'DESC' ? 'ASC' : 'DESC';
                 instance.setState(old => ({... old, SortFunction: column.Direction === 'ASC' ? fn : (a,b) => fn(b,a) }));
             }
-            return <button onClick={onClick}>{column.Direction ? column.Direction === 'ASC' ? '↓' : '↑' : '-'}</button> 
+            return <button className='column-sort-btn' onClick={onClick}>{column.Direction ? column.Direction === 'ASC' ? '↓' : '↑' : '-'}</button> 
         }
 
         function mapData(row: T, index: number) {
