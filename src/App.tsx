@@ -1,6 +1,6 @@
-import React, { Component } from 'react';
-import * as vis from 'vis';
-import * as xml from 'xml2js'
+import { Component } from 'react';
+import { Network, DataSet } from 'vis';
+import { parseString } from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
 import { ReadFiles } from './ReadFiles';
@@ -55,8 +55,8 @@ class App extends Component<{}, State> {
 
   componentDidUpdate() {
     if (this.elem && this.model) {
-      const data = { nodes: new vis.DataSet(this.model.nodes), edges: new vis.DataSet(this.model.edges) };
-      new vis.Network(this.elem, data, VisOptions);
+      const data = { nodes: new DataSet(this.model.nodes), edges: new DataSet(this.model.edges) };
+      new Network(this.elem, data, VisOptions);
     }
   }
 
@@ -117,7 +117,7 @@ class App extends Component<{}, State> {
             }));
           }
         }
-        xml.parseString(file.content, onParsed);
+        parseString(file.content, onParsed);
       }
       files.forEach(toXml);
     };

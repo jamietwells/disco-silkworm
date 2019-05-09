@@ -1,11 +1,11 @@
-import React, { TableHTMLAttributes } from 'react';
+import { DetailedHTMLProps, TableHTMLAttributes, Component } from 'react';
 
 type TableProps<T> = {
     Columns: Array<ColumnDefinition<T>>;
     Data: T[];
-} & React.DetailedHTMLProps<React.TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>
+} & DetailedHTMLProps<TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>
 
-export class Table<T> extends React.Component<TableProps<T>, TableState<T>> {
+export class Table<T> extends Component<TableProps<T>, TableState<T>> {
     constructor(props: TableProps<T>){
         super(props);
         this.state = { SortFunction: () => 1 }
