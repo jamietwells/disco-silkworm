@@ -1,4 +1,4 @@
-import { DetailedHTMLProps, TableHTMLAttributes, Component } from 'react';
+import React, { DetailedHTMLProps, TableHTMLAttributes, Component } from 'react';
 
 type TableProps<T> = {
     Columns: Array<ColumnDefinition<T>>;
