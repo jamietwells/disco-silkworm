@@ -30,7 +30,7 @@ export class Table<T> extends Component<TableProps<T>, TableState<T>> {
             function onClick(){
                 columns.forEach(c => c.Direction = undefined);
                 column.Direction = direction === 'DESC' ? 'ASC' : 'DESC';
-                instance.setState(old => ({... old, SortFunction: column.Direction === 'ASC' ? fn : (a,b) => fn(b,a) }));
+                instance.setState(old => ({...old, SortFunction: column.Direction === 'ASC' ? fn : (a,b) => fn(b,a) }));
             }
             return <button className='column-sort-btn' onClick={onClick}>{column.Direction ? column.Direction === 'ASC' ? '↓' : '↑' : '-'}</button> 
         }
@@ -38,7 +38,7 @@ export class Table<T> extends Component<TableProps<T>, TableState<T>> {
         function mapData(row: T, index: number) {
             return <tr key={index}>{columns.map((c, i) => <td key={i}>{c.Content(row)}</td>)}</tr>;
         }
-        return <table { ... tableProps }>
+        return <table {...tableProps }>
             <thead>
                 <tr>
                     {columns.map((c, i) => <td key={i}>{c.Name}{getSortButton(c)}</td>)}
@@ -86,7 +86,7 @@ function standardSort(a: any, b: any) {
     if ((a as string).localeCompare && (b as string).localeCompare)
         return (a as string).localeCompare(b as string);
     
-    if (a == b) return 0;
+    if (a === b) return 0;
     if (a > b) return 1;
     if (a < b) return -1;
 }

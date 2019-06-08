@@ -13,6 +13,7 @@ export interface ProjectFile {
         PropertyGroup: Array<{
             OutputType: string[];
             TargetFramework: string[];
+            TargetFrameworks: string[];
         }>;
     };
 }
