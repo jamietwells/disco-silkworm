@@ -21,6 +21,8 @@ export const VisOptions = {
     },
     layout: { 
         improvedLayout: false,
-        hierarchical: false
+        hierarchical: {
+            sortMethod: 'directed'
+        }
     }
 } as Options;

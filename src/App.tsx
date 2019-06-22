@@ -10,7 +10,8 @@ import { FileInfo, ProjectFile, ToDependencyMap, FilesMapType } from './Dependen
 type State = {
   Files: FileInfo[],
   ShowGraph: boolean,
-  Hierarchical: boolean
+  Hierarchical: boolean,
+  SelectedNode?: string;
 }
 
 class App extends Component<{}, State> {
@@ -29,16 +30,22 @@ class App extends Component<{}, State> {
   }
 
   componentDidUpdate() {
+    const instance = this;
     if (this.elem && this.model) {
       const data = {
         nodes: new DataSet<Node>(this.model.nodes),
         edges: new DataSet<Edge>(this.model.edges)
       };
-      new Network(this.elem, data, VisOptions);
+      const network = new Network(this.elem, data, VisOptions);
+
+      network.on("doubleClick", function (params) {
+        instance.setState(prev => ({ ...prev, SelectedNode: (params.nodes as string[])[0] }));
+      });
     }
   }
 
   render() {
+    (window as any).visOptions = VisOptions;
     const instance = this;
 
     function onLoad(files: Array<FileResult>) {
@@ -89,10 +96,36 @@ class App extends Component<{}, State> {
       return f.References.map(mapReferences);
     }
 
-    this.model = {
-      nodes: filesMap.map(f => ({ id: f.path.raw, label: f.path.name })),
-      edges: filesMap.map(mapEdges).flat(1),
-    };
+    if (this.state.SelectedNode) {
+      const node = filesMap.filter(f => f.path.raw === this.state.SelectedNode)[0];
+      if (!node) {
+        this.setState(prev => ({ ...prev, SelectedNode: undefined }));
+        return;
+      }
+      let nodes: FilesMapType[] = [];
+
+      const addNodes = function (current: FilesMapType[]) {
+        current.forEach(c => {
+          nodes = nodes.filter(n => n.path.raw !== c.path.raw)
+            .concat(c)
+            .concat(filesMap.filter(f => c.References.map(r => r.path.raw).some(p => p === f.path.raw)))
+        });
+      };
+
+      addNodes([node]);
+
+      this.model = {
+        nodes: nodes.map(f => ({ id: f.path.raw, label: f.path.name })),
+        edges: nodes.map(mapEdges).flat(1),
+      };
+
+    }
+    else {
+      this.model = {
+        nodes: filesMap.map(f => ({ id: f.path.raw, label: f.path.name })),
+        edges: filesMap.map(mapEdges).flat(1),
+      };
+    }
 
     function graphTableToggleClicked() {
       instance.setState(old => ({ ...old, ShowGraph: !old.ShowGraph }));
@@ -105,7 +138,14 @@ class App extends Component<{}, State> {
     }
 
     function hierarchicalClicked() {
-      VisOptions.layout.hierarchical = !VisOptions.layout.hierarchical;
+      if (VisOptions.layout.hierarchical) {
+        VisOptions.layout.hierarchical = false;
+      }
+      else {
+        VisOptions.layout.hierarchical = {
+          sortMethod: 'directed'
+        };
+      }
       instance.setState(old => ({ ...old, Hierarchical: VisOptions.layout.hierarchical }));
     }
 
@@ -129,6 +169,7 @@ class App extends Component<{}, State> {
         {f.path.name}
       </>;
     }
+
 
     const tableData = new TableData(filesMap)
       .AddSortableColumn("Project", renderFileCell, (a, b) => a.path.name.localeCompare(b.path.name))
