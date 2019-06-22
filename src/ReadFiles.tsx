@@ -27,10 +27,10 @@ function parsePath(path: string): FilePath {
     const parsed = parse(path);
 
     function isChildSubPathParent(parent: string[], child: string[]) {
-        if(parent.length < child.length)
+        if (parent.length < child.length)
             return false;
-        for(var i = 1; i <= child.length; i++){
-            if(child[child.length - i] !== parent[parent.length - i])
+        for (let i = 1; i <= child.length; i++) {
+            if (child[child.length - i] !== parent[parent.length - i])
                 return false;
         }
         return true;
@@ -39,7 +39,7 @@ function parsePath(path: string): FilePath {
     function isSubPathFor(child: string[]) {
         return isChildSubPathParent(path.split('/'), child);
     }
-    
+
     function isSubPathOf(parent: string[]) {
         return isChildSubPathParent(parent, path.split('/'));
     }

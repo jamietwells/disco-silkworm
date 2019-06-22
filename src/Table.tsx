@@ -6,7 +6,7 @@ type TableProps<T> = {
 } & DetailedHTMLProps<TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>
 
 export class Table<T> extends Component<TableProps<T>, TableState<T>> {
-    constructor(props: TableProps<T>){
+    constructor(props: TableProps<T>) {
         super(props);
         this.state = { SortFunction: () => 1 }
     }
@@ -21,24 +21,24 @@ export class Table<T> extends Component<TableProps<T>, TableState<T>> {
         const columns = Columns.map(c => c as SortableColumnDefinition<T>);
         const instance = this;
 
-        function getSortButton(column: SortableColumnDefinition<T>){
-            if(!column.SortFunction)
+        function getSortButton(column: SortableColumnDefinition<T>) {
+            if (!column.SortFunction)
                 return <></>;
             const fn = column.SortFunction;
             const direction = column.Direction;
 
-            function onClick(){
+            function onClick() {
                 columns.forEach(c => c.Direction = undefined);
                 column.Direction = direction === 'DESC' ? 'ASC' : 'DESC';
-                instance.setState(old => ({...old, SortFunction: column.Direction === 'ASC' ? fn : (a,b) => fn(b,a) }));
+                instance.setState(old => ({ ...old, SortFunction: column.Direction === 'ASC' ? fn : (a, b) => fn(b, a) }));
             }
-            return <button className='column-sort-btn' onClick={onClick}>{column.Direction ? column.Direction === 'ASC' ? '↓' : '↑' : '-'}</button> 
+            return <button className='column-sort-btn' onClick={onClick}>{column.Direction ? column.Direction === 'ASC' ? '↓' : '↑' : '-'}</button>
         }
 
         function mapData(row: T, index: number) {
             return <tr key={index}>{columns.map((c, i) => <td key={i}>{c.Content(row)}</td>)}</tr>;
         }
-        return <table {...tableProps }>
+        return <table {...tableProps}>
             <thead>
                 <tr>
                     {columns.map((c, i) => <th key={i}>{c.Name}{getSortButton(c)}</th>)}
@@ -52,7 +52,7 @@ export class Table<T> extends Component<TableProps<T>, TableState<T>> {
 }
 
 export interface TableState<T> {
-    SortFunction: (a: T, b: T) => number 
+    SortFunction: (a: T, b: T) => number
 }
 
 type selectorResult = JSX.Element | string | number;
@@ -75,8 +75,8 @@ export class TableData<T> {
         return this;
     }
 
-    AddSortableColumn<TResult extends selectorResult>(name: string, content: (rowItem: T) => TResult, sortFunction?: ((a: T, b: T) => number) ) {
-        const fn =  sortFunction ? sortFunction : (a: T, b: T) => standardSort(content(a), content(b));
+    AddSortableColumn<TResult extends selectorResult>(name: string, content: (rowItem: T) => TResult, sortFunction?: ((a: T, b: T) => number)) {
+        const fn = sortFunction ? sortFunction : (a: T, b: T) => standardSort(content(a), content(b));
         this.Columns.push({ Name: name, Content: content, SortFunction: fn } as ColumnDefinition<T>);
         return this;
     }
@@ -85,7 +85,7 @@ export class TableData<T> {
 function standardSort(a: any, b: any) {
     if ((a as string).localeCompare && (b as string).localeCompare)
         return (a as string).localeCompare(b as string);
-    
+
     if (a === b) return 0;
     if (a > b) return 1;
     if (a < b) return -1;

@@ -177,16 +177,15 @@ class App extends Component<{}, State> {
       }
     }
 
-
     const tableData = new TableData(filesMap)
       .AddSortableColumn("Project", f => f.path.name, (a, b) => a.path.name.localeCompare(b.path.name))
       .AddSortableColumn("Path", f => f.path.dir, (a, b) => a.path.dir.localeCompare(b.path.dir))
-      .AddColumn("Framework Version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
+      .AddColumn("Framework version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
       .AddColumn("References", f => <ul>{f.References.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of references", f => f.References.length)
       .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length)
-      .AddColumn("", renderControlCell(this));
+      .AddColumn("Graph controls", renderControlCell(this));
 
     return <>
       <nav>

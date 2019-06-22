@@ -37,10 +37,10 @@ export interface FileInfo extends FileResult {
 export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
     function searchForFile(path: string) {
         const matchingFiles = files
-            .filter(f => f.path.isSubPathFor(path.split('\\').filter(p => p !== '..' )));
-        if(matchingFiles.length ===0)
+            .filter(f => f.path.isSubPathFor(path.split('\\').filter(p => p !== '..')));
+        if (matchingFiles.length === 0)
             return false;
-        if(matchingFiles.length > 1)
+        if (matchingFiles.length > 1)
             return false;
         return matchingFiles[0];
     }
@@ -67,7 +67,7 @@ export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
         .map(f => ({ ...f, References: findDependencies(f) } as FileReferences));
 
     function findDependants(file: FileReferences): FileInfo[] {
-        function ReferenceTheInputFile(current: FileReferences){
+        function ReferenceTheInputFile(current: FileReferences) {
             return current
                 .References
                 .some(r => r.path.isSubPathFor(file.path.raw.split('/')));
