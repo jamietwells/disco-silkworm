@@ -1,28 +1,68 @@
 import React, { ChangeEvent } from 'react';
+import { ParsedPath } from 'path';
+import parse from 'path-parse';
 
-type FileResult = {
-    file: File;
+export interface FilePath extends ParsedPath {
+    raw: string;
+    isParentPathOf: ((path: string[]) => boolean);
+    isSubPathFor: ((path: string[]) => boolean);
+}
+
+export interface FileResult {
+    name: string;
     content: string;
+    path: FilePath;
 }
 
 type Props = {
     children: string;
     onLoad: (files: FileResult[]) => void;
     multiple?: boolean;
-    accept?: string;
+    accept: string[];
     className?: string;
     id?: string;
 };
+
+function parsePath(path: string): FilePath {
+    const parsed = parse(path);
+
+    function isChildSubPathParent(parent: string[], child: string[]) {
+        console.log(`asking if ${child} is a subpath of ${parent}`);
+        if(parent.length < child.length)
+            return false;
+        for(var i = 1; i <= child.length; i++){
+            if(child[child.length - i] !== parent[parent.length - i])
+            {
+                console.log(false);
+                return false;
+            }
+        }
+        console.log(true);
+        return true;
+    }
+
+    function isSubPathFor(child: string[]) {
+        return isChildSubPathParent(path.split('/'), child);
+    }
+    
+    function isSubPathOf(parent: string[]) {
+        return isChildSubPathParent(parent, path.split('/'));
+    }
+
+    return { ...parsed, raw: path, isParentPathOf: isSubPathOf, isSubPathFor }
+}
 
 export const ReadFiles = (props: Props) => {
 
     function handleChange(event: ChangeEvent<HTMLInputElement>) {
         const results: FileResult[] = [];
 
-        function loadend(file: File, reader: FileReader, length: number) {
+        function loadend(file: { file: File, path: FilePath }, reader: FileReader, length: number) {
             return function () {
                 results.push({
-                    file: file,
+                    ...file.file,
+                    name: file.file.name,
+                    path: file.path,
                     content: (reader.result as string)
                 });
                 if (length === results.length)
@@ -33,20 +73,42 @@ export const ReadFiles = (props: Props) => {
         if (!event.currentTarget.files)
             return;
 
-        const length = event.currentTarget.files.length;
+        const files = function () {
+            const results: File[] = [];
+            const length = event.currentTarget.files.length;
+            for (let i = 0; i < length; i++) {
+                const file = event.currentTarget.files[i];
+                results.push(file);
+            }
+            return results;
+        }()
+            .map(f => ({
+                path: parsePath((f as any).webkitRelativePath as string),
+                file: f
+            }))
+            .filter(f => props.accept.length === 0 || props.accept.filter(a => a === f.path.ext).length === 1);
 
-        for(let i = 0; i < length; i++)
-        {
-            const file = event.currentTarget.files[i];
+        files.forEach(file => {
             const reader = new FileReader();
-
-            reader.addEventListener('loadend', loadend(file, reader, length));
-            reader.readAsText(file);
-        }
+            reader.addEventListener('loadend', loadend(file, reader, files.length));
+            reader.readAsText(file.file);
+        });
     }
+
     let inputElement: HTMLInputElement | null;
+
+    const inputAttributes = {
+        webkitdirectory: "",
+        directory: "",
+        onChange: handleChange,
+        type: 'file',
+        id: 'folder',
+        hidden: true,
+        className: 'input-file hidden'
+    };
+
     return <>
-        <input type='file' id='folder' hidden={true} className='input-file hidden' accept={props.accept} onChange={handleChange} multiple={props.multiple} ref={input => inputElement = input} />
+        <input {...inputAttributes} ref={input => inputElement = input} />
         <button id={props.id} className={props.className} onClick={() => {
             if (inputElement)
                 (inputElement).click();

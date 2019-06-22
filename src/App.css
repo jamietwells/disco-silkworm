@@ -45,7 +45,7 @@ table tbody tr {
   background-color: #202020;
 }
 
-table thead tr td {
+table thead tr th {
   padding: 10px;
   padding-top: 20px;
   padding-bottom: 20px;

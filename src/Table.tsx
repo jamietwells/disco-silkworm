@@ -41,7 +41,7 @@ export class Table<T> extends Component<TableProps<T>, TableState<T>> {
         return <table {...tableProps }>
             <thead>
                 <tr>
-                    {columns.map((c, i) => <td key={i}>{c.Name}{getSortButton(c)}</td>)}
+                    {columns.map((c, i) => <th key={i}>{c.Name}{getSortButton(c)}</th>)}
                 </tr>
             </thead>
             <tbody>

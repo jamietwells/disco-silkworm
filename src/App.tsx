@@ -3,9 +3,9 @@ import { Network, DataSet, Edge, Node } from 'vis';
 import { parseString } from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
-import { ReadFiles } from './ReadFiles';
+import { ReadFiles, FileResult } from './ReadFiles';
 import { Table, TableData } from './Table';
-import { FileInfo, ProjectFile, ToDependencyMap, FilesMapType, FileDetails } from './DependencyMapper';
+import { FileInfo, ProjectFile, ToDependencyMap, FilesMapType } from './DependencyMapper';
 
 type State = {
   Files: FileInfo[],
@@ -15,14 +15,14 @@ type State = {
 
 class App extends Component<{}, State> {
 
-  readonly accept: string;
+  readonly accept: string[];
   elem: HTMLElement | null;
-  model: { nodes: Array<{id: string, label: string}>, edges: Array<{from: string, to: string}> } | null;
+  model: { nodes: Array<{ id: string, label: string }>, edges: Array<{ from: string, to: string }> } | null;
 
   constructor(props: {}) {
     super(props);
-    this.state = { Files: [], ShowGraph: true, Hierarchical: VisOptions.layout.hierarchical };
-    this.accept = '.csproj,.fsproj,.proj,.vbproj'
+    this.state = { Files: [], ShowGraph: false, Hierarchical: VisOptions.layout.hierarchical };
+    this.accept = ['.csproj', '.fsproj', '.proj', '.vbproj']
     this.elem = null;
     this.model = null;
     this.componentDidUpdate.bind(this);
@@ -30,7 +30,7 @@ class App extends Component<{}, State> {
 
   componentDidUpdate() {
     if (this.elem && this.model) {
-      const data = { 
+      const data = {
         nodes: new DataSet<Node>(this.model.nodes),
         edges: new DataSet<Edge>(this.model.edges)
       };
@@ -41,16 +41,16 @@ class App extends Component<{}, State> {
   render() {
     const instance = this;
 
-    function onLoad(files: Array<{ file: File, content: string }>) {
+    function onLoad(files: Array<FileResult>) {
       const length = files.length;
       const results: FileInfo[] = [];
-      function toXml(file: { file: File, content: string }) {
+      function toXml(file: FileResult) {
         let faulted = 0;
         function onParsed(error: any, result: any) {
           function notAlreadyAdded(file: FileInfo) {
             return files
-              .map(f => f.file.name)
-              .filter(n => n === file.Name)
+              .map(f => f.path)
+              .filter(n => n === file.path)
               .length === 0;
           }
 
@@ -59,9 +59,9 @@ class App extends Component<{}, State> {
             faulted++;
           }
 
-          else{
+          else {
             results.push({
-              Name: file.file.name,
+              ...file,
               Json: JSON.stringify(result, null, 2),
               Xml: file.content,
               Parsed: result as ProjectFile
@@ -83,14 +83,14 @@ class App extends Component<{}, State> {
     const filesMap = ToDependencyMap(this.state.Files);
 
     function mapEdges(f: FilesMapType) {
-      function mapReferences(r: FileDetails) {
-        return ({ from: f.File.Name, to: r.Name })
+      function mapReferences(r: FileInfo) {
+        return ({ from: f.path.raw, to: r.path.raw })
       }
       return f.References.map(mapReferences);
     }
 
     this.model = {
-      nodes: filesMap.map(f => ({ id: f.File.Name, label: f.File.Name })),
+      nodes: filesMap.map(f => ({ id: f.path.raw, label: f.path.name })),
       edges: filesMap.map(mapEdges).flat(1),
     };
 
@@ -100,7 +100,7 @@ class App extends Component<{}, State> {
 
     function deleteClicked(file: string, instance: App) {
       return function () {
-        instance.setState(old => ({ ...old, Files: old.Files.filter(f => f.Name !== file) }));
+        instance.setState(old => ({ ...old, Files: old.Files.filter(f => f.path.raw !== file) }));
       }
     }
 
@@ -109,8 +109,8 @@ class App extends Component<{}, State> {
       instance.setState(old => ({ ...old, Hierarchical: VisOptions.layout.hierarchical }));
     }
 
-    function getTargetFramework(file: FilesMapType){
-      const propertyGroups = file.File.Parsed.Project.PropertyGroup;
+    function getTargetFramework(file: FilesMapType) {
+      const propertyGroups = file.Parsed.Project.PropertyGroup;
 
       return propertyGroups.map(p => p.TargetFramework)
         .flat(1)
@@ -121,12 +121,20 @@ class App extends Component<{}, State> {
         .flat();
     }
 
+    function renderFileCell(f: any) {
+      return <>
+        <span className='del-button' onClick={deleteClicked(f.path.raw, instance)}>
+          Delete
+        </span>
+        {f.path.name}
+      </>;
+    }
     const tableData = new TableData(filesMap)
-      .AddSortableColumn("File", f => <><span className='del-button' onClick={deleteClicked(f.File.Name, instance)}>Delete</span>{f.File.Name}</>, (a, b) => a.File.Name.localeCompare(b.File.Name))
-      .AddColumn("Framework Version", f => <ul>{getTargetFramework(f).map(t => <li>{t}</li>)}</ul>)
-      .AddColumn("References", f => <ul>{f.References.map(i => i.Name).map(r => <li key={r}>{r}</li>)}</ul>)
+      .AddSortableColumn("File", renderFileCell, (a, b) => a.path.raw.localeCompare(b.path.raw))
+      .AddColumn("Framework Version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
+      .AddColumn("References", f => <ul>{f.References.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of references", f => f.References.length)
-      .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r.Name}>{r.Name}</li>)}</ul>)
+      .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length);
 
     return <>

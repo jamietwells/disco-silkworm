@@ -1,3 +1,5 @@
+import { FileResult } from "./ReadFiles";
+
 export interface ProjectFile {
     Project: {
         $: {
@@ -18,38 +20,36 @@ export interface ProjectFile {
     };
 }
 
-export interface FileReferences {
-    File: FileInfo,
-    References: FileDetails[]
+export interface FileReferences extends FileInfo {
+    References: FileInfo[]
 }
 
 export interface FilesMapType extends FileReferences {
-    ReferencedBy: FileDetails[]
+    ReferencedBy: FileInfo[]
 };
 
-export interface FileDetails {
-    Name: string,
-    Path: string
-}
-
-export interface FileInfo {
-    Name: string,
+export interface FileInfo extends FileResult {
     Json: string,
     Xml: string,
     Parsed: ProjectFile
 }
 
 export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
-    function fileNameFromPath(path: string) {
-        const name = path.split('\\').pop()!.split('/').pop()!;
-        return { Name: name, Path: path };
+    function searchForFile(path: string) {
+        const matchingFiles = files
+            .filter(f => f.path.isSubPathFor(path.split('\\').filter(p => p !== '..' )));
+        if(matchingFiles.length ===0)
+            return false;
+        if(matchingFiles.length > 1)
+            return false;
+        return matchingFiles[0];
     }
 
-    function ToDependencyMapInner(file: FileInfo) {
+    function findDependencies(file: FileInfo): FileInfo[] {
         if (!file.Parsed.Project.ItemGroup)
-            return { File: file, References: [] }
+            return [];
 
-        const references = file
+        return file
             .Parsed
             .Project
             .ItemGroup
@@ -58,21 +58,25 @@ export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
             .flat(1)
             .filter(r => r.$.Include)
             .map(r => r.$.Include)
-            .map(fileNameFromPath);
-
-        return { File: file, References: references };
+            .map(searchForFile)
+            .filter(f => f)
+            .map(f => f as FileInfo);
     }
 
-    const filesMap = files.map(ToDependencyMapInner);
+    const filesMap = files
+        .map(f => ({ ...f, References: findDependencies(f) } as FileReferences));
 
-    function findReferences(file: FileReferences) {
+    function findDependants(file: FileReferences): FileInfo[] {
+        function ReferenceTheInputFile(current: FileReferences){
+            return current
+                .References
+                .some(r => r.path.isSubPathFor(file.path.raw.split('/')));
+        }
+
         return filesMap
-            .map(f => ({ file: f, references: f.References.map(f => f.Name) }))
-            .filter(f => f.references.some(r => file.File.Name === r))
-            .map(f => f.file.File.Name)
-            .map(fileNameFromPath);
+            .filter(ReferenceTheInputFile);
     }
 
     return filesMap
-        .map(f => ({ ...f, ReferencedBy: findReferences(f) }));
+        .map(f => ({ ...f, ReferencedBy: findDependants(f) }));
 }
