@@ -129,8 +129,10 @@ class App extends Component<{}, State> {
         {f.path.name}
       </>;
     }
+
     const tableData = new TableData(filesMap)
-      .AddSortableColumn("File", renderFileCell, (a, b) => a.path.raw.localeCompare(b.path.raw))
+      .AddSortableColumn("Project", renderFileCell, (a, b) => a.path.name.localeCompare(b.path.name))
+      .AddSortableColumn("Path", f => f.path.dir, (a, b) => a.path.dir.localeCompare(b.path.dir))
       .AddColumn("Framework Version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
       .AddColumn("References", f => <ul>{f.References.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of references", f => f.References.length)
