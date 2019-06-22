@@ -161,24 +161,32 @@ class App extends Component<{}, State> {
         .flat();
     }
 
-    function renderFileCell(f: any) {
-      return <>
-        <span className='del-button' onClick={deleteClicked(f.path.raw, instance)}>
-          Delete
+    function renderControlCell(instance: App) {
+      return function (f: any) {
+        return <>
+          <span className='del-button button' onClick={deleteClicked(f.path.raw, instance)}>
+            Delete
         </span>
-        {f.path.name}
-      </>;
+          <span hidden={instance.state.SelectedNode !== undefined} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: f.path.raw }))}>
+            Focus
+        </span>
+          <span hidden={instance.state.SelectedNode === undefined || f.path.raw !== instance.state.SelectedNode} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: undefined }))}>
+            Unfocus
+        </span>
+        </>
+      }
     }
 
 
     const tableData = new TableData(filesMap)
-      .AddSortableColumn("Project", renderFileCell, (a, b) => a.path.name.localeCompare(b.path.name))
+      .AddSortableColumn("Project", f => f.path.name, (a, b) => a.path.name.localeCompare(b.path.name))
       .AddSortableColumn("Path", f => f.path.dir, (a, b) => a.path.dir.localeCompare(b.path.dir))
       .AddColumn("Framework Version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
       .AddColumn("References", f => <ul>{f.References.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of references", f => f.References.length)
       .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
-      .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length);
+      .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length)
+      .AddColumn("", renderControlCell(this));
 
     return <>
       <nav>
