@@ -27,17 +27,12 @@ function parsePath(path: string): FilePath {
     const parsed = parse(path);
 
     function isChildSubPathParent(parent: string[], child: string[]) {
-        console.log(`asking if ${child} is a subpath of ${parent}`);
         if(parent.length < child.length)
             return false;
         for(var i = 1; i <= child.length; i++){
             if(child[child.length - i] !== parent[parent.length - i])
-            {
-                console.log(false);
                 return false;
-            }
         }
-        console.log(true);
         return true;
     }
 

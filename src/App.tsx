@@ -49,8 +49,8 @@ class App extends Component<{}, State> {
         function onParsed(error: any, result: any) {
           function notAlreadyAdded(file: FileInfo) {
             return files
-              .map(f => f.path)
-              .filter(n => n === file.path)
+              .map(f => f.path.raw)
+              .filter(n => n === file.path.raw)
               .length === 0;
           }
 

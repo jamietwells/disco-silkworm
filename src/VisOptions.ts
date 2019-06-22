@@ -21,6 +21,6 @@ export const VisOptions = {
     },
     layout: { 
         improvedLayout: false,
-        hierarchical: true
+        hierarchical: false
     }
 } as Options;
