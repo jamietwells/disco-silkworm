@@ -259,7 +259,7 @@ class App extends Component<{}, State> {
           </a>
         </span>
         <a href="https://glitch.com/edit/#!/disco-silkworm"><button>Made with Glitch</button></a>
-        <ReadFiles onLoad={onLoad} multiple={true} accept={instance.accept}>Import project files</ReadFiles>
+        <ReadFiles onLoad={onLoad} accept={instance.accept}>Import project files</ReadFiles>
         <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? 'Show table' : 'Show graph'}</button>
         <button className={shouldShow(instance.state.ShowGraph)} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'Web layout' : 'Hierarchical'}</button>
         <button className={shouldShow(instance.state.ShowGraph && instance.state.SelectedNode.nodeName !== undefined)} onClick={swapDirection}>{instance.state.SelectedNode.direction === 'up' ? 'Show dependencies' : 'Show dependants'}</button>

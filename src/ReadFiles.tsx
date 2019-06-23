@@ -17,7 +17,6 @@ export interface FileResult {
 type Props = {
     children: string;
     onLoad: (files: FileResult[]) => void;
-    multiple?: boolean;
     accept: string[];
     className?: string;
     id?: string;
