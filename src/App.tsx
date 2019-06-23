@@ -6,6 +6,7 @@ import { VisOptions } from './VisOptions';
 import { ReadFiles, FileResult } from './ReadFiles';
 import { Table, TableData } from './Table';
 import { FileInfo, ProjectFile, ToDependencyMap, FilesMapType } from './DependencyMapper';
+import { ReactComponent as Logo } from './assets/github-icon-dark.svg';
 
 type State = {
   Files: FileInfo[],
@@ -206,7 +207,7 @@ class App extends Component<{}, State> {
       <nav>
         <span className="github-icon">
           <a href="https://github.com/jamietwells/disco-silkworm">
-            <img alt="github logo" src={require('./assets/GitHub-Mark-Light-32px.png')} />
+            <Logo className="github-icon" />
           </a>
         </span>
         <a href="https://glitch.com/edit/#!/disco-silkworm"><button>Made with Glitch</button></a>

@@ -18,8 +18,9 @@ table{
 
 .github-icon{
   display: inline-block;
-  vertical-align: top;
-  margin: 8px 0 0 8px;
+  margin: 4px;
+  width: 32px;
+  height: 32px;
 }
 
 nav button {
