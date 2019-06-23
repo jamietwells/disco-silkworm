@@ -12,41 +12,48 @@ type State = {
   Files: FileInfo[],
   ShowGraph: boolean,
   Hierarchical: boolean,
-  SelectedNode?: { name: string; direction: 'up' | 'down' };
+  SelectedNode: { nodeName?: string; direction: 'up' | 'down' };
 }
 
 class App extends Component<{}, State> {
 
   readonly accept: string[];
-  elem: HTMLElement | null;
+  graphElem: HTMLElement | null;
   model: { nodes: Array<{ id: string, label: string }>, edges: Array<{ from: string, to: string }> } | null;
 
   constructor(props: {}) {
     super(props);
-    this.state = { Files: [], ShowGraph: false, Hierarchical: VisOptions.layout.hierarchical };
+    this.state = {
+      Files: [],
+      ShowGraph: false,
+      Hierarchical: VisOptions.layout.hierarchical,
+      SelectedNode: {
+        direction: 'up'
+      }
+    };
     this.accept = ['.csproj', '.fsproj', '.proj', '.vbproj']
-    this.elem = null;
+    this.graphElem = null;
     this.model = null;
     this.componentDidUpdate.bind(this);
   }
 
   componentDidUpdate() {
     const instance = this;
-    if (this.elem && this.model) {
+    if (this.graphElem && this.model) {
       const data = {
         nodes: new DataSet<Node>(this.model.nodes),
         edges: new DataSet<Edge>(this.model.edges)
       };
-      const network = new Network(this.elem, data, VisOptions);
+      const network = new Network(this.graphElem, data, VisOptions);
 
       network.on("doubleClick", function (params) {
-        function swapDirection(prev?: { direction: 'up' | 'down'}): 'up' | 'down' {
-          if(prev && prev.direction === 'up')
-            return 'down';
-          else
-            return 'up';
-        }
-        instance.setState(prev => ({ ...prev, SelectedNode: {name: (params.nodes as string[])[0], direction: swapDirection(prev.SelectedNode)} }));
+        instance.setState(prev => ({
+          ...prev,
+          SelectedNode: {
+            ...prev.SelectedNode,
+            nodeName: (params.nodes as string[])[0]
+          }
+        }));
       });
     }
   }
@@ -103,29 +110,42 @@ class App extends Component<{}, State> {
       return f.References.map(mapReferences);
     }
 
-    if (this.state.SelectedNode) {
-      const {direction, name} = this.state.SelectedNode;
+    if (this.state.SelectedNode.nodeName) {
+      const { direction, nodeName: name } = this.state.SelectedNode;
       const node = filesMap.filter(f => f.path.raw === name)[0];
       if (!node) {
-        this.setState(prev => ({ ...prev, SelectedNode: undefined }));
+        this.setState(prev => ({ ...prev, SelectedNode: { ...prev.SelectedNode, nodeName: undefined } }));
         return <></>;
       }
-      let nodes: FilesMapType[] = [];
 
-      const directionFunction: ((f :FilesMapType) => FileInfo[]) = 
-        direction === 'up' 
+      const directionFunction: ((f: FilesMapType) => FileInfo[]) =
+        direction === 'up'
           ? f => f.ReferencedBy
           : f => f.References;
 
-      const addNodes = function (current: FilesMapType[]) {
+
+      const addNodes = function (current: FilesMapType[], results: FilesMapType[]): FilesMapType[] {
+        function findMatchingFileMap(file: FileInfo): FilesMapType {
+          return filesMap
+            .filter(f => f.path.raw === file.path.raw)[0];
+        }
+
         current.forEach(c => {
-          nodes = nodes.filter(n => n.path.raw !== c.path.raw)
+
+          const next = directionFunction(c)
+            .map(findMatchingFileMap);
+
+          addNodes(next, results)
             .concat(c)
-            .concat(filesMap.filter(f => directionFunction(c).map(r => r.path.raw).some(p => p === f.path.raw)))
+            .forEach(n => {
+              if (results.filter(r => r.path.raw === n.path.raw).length === 0)
+                results.push(n);
+            });
         });
+        return results;
       };
 
-      addNodes([node]);
+      const nodes = addNodes([node], []);
 
       this.model = {
         nodes: nodes.map(f => ({ id: f.path.raw, label: f.path.name })),
@@ -142,6 +162,16 @@ class App extends Component<{}, State> {
 
     function graphTableToggleClicked() {
       instance.setState(old => ({ ...old, ShowGraph: !old.ShowGraph }));
+    }
+
+    function swapDirection() {
+      instance.setState(old => ({
+        ...old,
+        SelectedNode: {
+          ...old.SelectedNode,
+          direction: old.SelectedNode.direction === 'up' ? 'down' : 'up'
+        }
+      }));
     }
 
     function deleteClicked(file: string, instance: App) {
@@ -175,18 +205,32 @@ class App extends Component<{}, State> {
     }
 
     function renderControlCell(instance: App) {
+      function setNodeName(name?: string) {
+        return function () {
+          instance.setState(prev => ({
+            ...prev,
+            SelectedNode: {
+              ...prev.SelectedNode,
+              nodeName: name
+            }
+          }));
+        }
+      }
+
       return function (f: FilesMapType) {
         return <>
           <span className='del-button button' onClick={deleteClicked(f.path.raw, instance)}>
             Delete
         </span>
-          <span hidden={instance.state.SelectedNode !== undefined && instance.state.SelectedNode.direction === 'up'} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: { name: f.path.raw, direction: 'up' } }))}>
-            Focus up
+          <span
+            hidden={instance.state.SelectedNode.nodeName !== undefined}
+            className='focus-button  button' onClick={setNodeName(f.path.raw)}>
+            Focus
         </span>
-          <span hidden={instance.state.SelectedNode !== undefined && instance.state.SelectedNode.direction === 'down'} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: { name: f.path.raw, direction: 'down' } }))}>
-            Focus down
-        </span>
-          <span hidden={instance.state.SelectedNode === undefined || f.path.raw !== instance.state.SelectedNode.name} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: undefined }))}>
+          <span
+            hidden={instance.state.SelectedNode.nodeName === undefined || f.path.raw !== instance.state.SelectedNode.nodeName}
+            className='focus-button  button'
+            onClick={setNodeName()}>
             Unfocus
         </span>
         </>
@@ -203,6 +247,10 @@ class App extends Component<{}, State> {
       .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length)
       .AddColumn("Graph controls", renderControlCell(this));
 
+    function shouldShow(value: boolean): 'hidden' | '' {
+      return value ? '' : 'hidden';
+    }
+
     return <>
       <nav>
         <span className="github-icon">
@@ -211,12 +259,13 @@ class App extends Component<{}, State> {
           </a>
         </span>
         <a href="https://glitch.com/edit/#!/disco-silkworm"><button>Made with Glitch</button></a>
-        <ReadFiles onLoad={onLoad} multiple={true} accept={this.accept}>Import project files</ReadFiles>
+        <ReadFiles onLoad={onLoad} multiple={true} accept={instance.accept}>Import project files</ReadFiles>
         <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? 'Show table' : 'Show graph'}</button>
-        {instance.state.ShowGraph ? (<button onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'Web layout' : 'Hierarchical'}</button>) : <></>}
+        <button className={shouldShow(instance.state.ShowGraph)} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'Web layout' : 'Hierarchical'}</button>
+        <button className={shouldShow(instance.state.ShowGraph && instance.state.SelectedNode.nodeName !== undefined)} onClick={swapDirection}>{instance.state.SelectedNode.direction === 'up' ? 'Show dependencies' : 'Show dependants'}</button>
       </nav>
-      <div hidden={!instance.state.ShowGraph} className='graph' ref={r => this.elem = r}></div>
-      <Table hidden={instance.state.ShowGraph} {...tableData} />
+      <div className={'graph ' + shouldShow(instance.state.ShowGraph)} ref={r => instance.graphElem = r}></div>
+      <Table className={shouldShow(!instance.state.ShowGraph)} {...tableData} />
     </>
   }
 }
