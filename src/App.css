@@ -7,6 +7,10 @@
   z-index: -1;
 }
 
+button:hover {
+  background-color: #404040;
+}
+
 button {
   background-color: #202020;
   color: #F0F0FF;
@@ -26,7 +30,7 @@ table{
   margin: 4px;
   width: 32px;
   height: 32px;
-  background-color: #202020;
+  background-color: #000000;
 }
 
 nav button {
@@ -43,8 +47,16 @@ nav button {
   cursor: pointer;
 }
 
+.focus-button:hover {
+  background-color: rgb(65, 65, 173);
+}
+
 .focus-button {
   background-color: darkblue;
+}
+
+.del-button:hover {
+  background-color: rgb(168, 37, 37);
 }
 
 .del-button {
