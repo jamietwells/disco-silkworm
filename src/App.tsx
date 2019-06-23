@@ -11,7 +11,7 @@ type State = {
   Files: FileInfo[],
   ShowGraph: boolean,
   Hierarchical: boolean,
-  SelectedNode?: string;
+  SelectedNode?: { name: string; direction: 'up' | 'down' };
 }
 
 class App extends Component<{}, State> {
@@ -39,7 +39,13 @@ class App extends Component<{}, State> {
       const network = new Network(this.elem, data, VisOptions);
 
       network.on("doubleClick", function (params) {
-        instance.setState(prev => ({ ...prev, SelectedNode: (params.nodes as string[])[0] }));
+        function swapDirection(prev?: { direction: 'up' | 'down'}): 'up' | 'down' {
+          if(prev && prev.direction === 'up')
+            return 'down';
+          else
+            return 'up';
+        }
+        instance.setState(prev => ({ ...prev, SelectedNode: {name: (params.nodes as string[])[0], direction: swapDirection(prev.SelectedNode)} }));
       });
     }
   }
@@ -97,18 +103,24 @@ class App extends Component<{}, State> {
     }
 
     if (this.state.SelectedNode) {
-      const node = filesMap.filter(f => f.path.raw === this.state.SelectedNode)[0];
+      const {direction, name} = this.state.SelectedNode;
+      const node = filesMap.filter(f => f.path.raw === name)[0];
       if (!node) {
         this.setState(prev => ({ ...prev, SelectedNode: undefined }));
-        return;
+        return <></>;
       }
       let nodes: FilesMapType[] = [];
+
+      const directionFunction: ((f :FilesMapType) => FileInfo[]) = 
+        direction === 'up' 
+          ? f => f.ReferencedBy
+          : f => f.References;
 
       const addNodes = function (current: FilesMapType[]) {
         current.forEach(c => {
           nodes = nodes.filter(n => n.path.raw !== c.path.raw)
             .concat(c)
-            .concat(filesMap.filter(f => c.References.map(r => r.path.raw).some(p => p === f.path.raw)))
+            .concat(filesMap.filter(f => directionFunction(c).map(r => r.path.raw).some(p => p === f.path.raw)))
         });
       };
 
@@ -162,15 +174,18 @@ class App extends Component<{}, State> {
     }
 
     function renderControlCell(instance: App) {
-      return function (f: any) {
+      return function (f: FilesMapType) {
         return <>
           <span className='del-button button' onClick={deleteClicked(f.path.raw, instance)}>
             Delete
         </span>
-          <span hidden={instance.state.SelectedNode !== undefined} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: f.path.raw }))}>
-            Focus
+          <span hidden={instance.state.SelectedNode !== undefined && instance.state.SelectedNode.direction === 'up'} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: { name: f.path.raw, direction: 'up' } }))}>
+            Focus up
         </span>
-          <span hidden={instance.state.SelectedNode === undefined || f.path.raw !== instance.state.SelectedNode} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: undefined }))}>
+          <span hidden={instance.state.SelectedNode !== undefined && instance.state.SelectedNode.direction === 'down'} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: { name: f.path.raw, direction: 'down' } }))}>
+            Focus down
+        </span>
+          <span hidden={instance.state.SelectedNode === undefined || f.path.raw !== instance.state.SelectedNode.name} className='focus-button  button' onClick={() => instance.setState(prev => ({ ...prev, SelectedNode: undefined }))}>
             Unfocus
         </span>
         </>
