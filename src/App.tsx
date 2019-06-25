@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, ChangeEvent } from 'react';
 import { Network, DataSet, Edge, Node } from 'vis';
 import { parseString } from 'xml2js'
 import './App.css';
@@ -13,13 +13,16 @@ type State = {
   ShowGraph: boolean,
   Hierarchical: boolean,
   SelectedNode: { nodeName?: string; direction: 'up' | 'down' };
+  FilterText?: string
 }
+
+type IdLabelType = { id: string, label: string };
 
 class App extends Component<{}, State> {
 
   readonly accept: string[];
   graphElem: HTMLElement | null;
-  model: { nodes: Array<{ id: string, label: string }>, edges: Array<{ from: string, to: string }> } | null;
+  model: { nodes: IdLabelType[], edges: Array<{ from: string, to: string }> } | null;
 
   constructor(props: {}) {
     super(props);
@@ -34,19 +37,56 @@ class App extends Component<{}, State> {
     this.accept = ['.csproj', '.fsproj', '.proj', '.vbproj']
     this.graphElem = null;
     this.model = null;
-    this.componentDidUpdate.bind(this);
   }
 
-  componentDidUpdate() {
-    const instance = this;
-    if (this.graphElem && this.model) {
+  reflowNetwork(instance: App) {
+    instance.componentDidUpdate = function () {
+      reflowNetworkInner();
+      instance.componentDidUpdate = function () { };
+    }
+
+    function reflowNetworkInner() {
+      if (!instance.graphElem || !instance.model)
+        return;
+
+      if (!(window as any).visOptions)
+        (window as any).visOptions = VisOptions;
+
       const data = {
-        nodes: new DataSet<Node>(this.model.nodes),
-        edges: new DataSet<Edge>(this.model.edges)
+        nodes: new DataSet<Node>(),
+        edges: new DataSet<Edge>(instance.model.edges)
       };
-      const network = new Network(this.graphElem, data, VisOptions);
+      const network = new Network(instance.graphElem, data, (window as any).visOptions);
+
+      const delayBetweenNodes = 100;
+      (<T,>(items: T[], callback: (item: T) => void) => {
+        const [head, ...tail] = items;
+        performActionOnDelay(head, tail);
+
+        function performActionOnDelay(head: T, tail: T[]) {
+          if (!head)
+            return;
+
+          function callbackInner() {
+            const [nextHead, ...nextTail] = tail;
+            performActionOnDelay(nextHead, nextTail);
+          }
+
+          setTimeout(callbackInner, delayBetweenNodes);
+          callback(head);
+        }
+      })(instance.model.nodes, callback);
+
+      function callback(n: IdLabelType) {
+        function randomPosition() {
+          return ((Math.random() - 0.5) * 10);
+        }
+        data.nodes.update({ ...n, x: randomPosition(), y: randomPosition() });
+        network.focus(n.id);
+      }
 
       network.on("doubleClick", function (params) {
+        instance.reflowNetwork(instance);
         instance.setState(prev => ({
           ...prev,
           SelectedNode: {
@@ -59,7 +99,7 @@ class App extends Component<{}, State> {
   }
 
   render() {
-    (window as any).visOptions = VisOptions;
+
     const instance = this;
 
     function onLoad(files: Array<FileResult>) {
@@ -90,6 +130,7 @@ class App extends Component<{}, State> {
           }
 
           if (length === faulted + results.length) {
+            instance.reflowNetwork(instance);
             instance.setState(old => ({
               ...old,
               Files: old.Files.filter(notAlreadyAdded).concat(results)
@@ -114,6 +155,7 @@ class App extends Component<{}, State> {
       const { direction, nodeName: name } = this.state.SelectedNode;
       const node = filesMap.filter(f => f.path.raw === name)[0];
       if (!node) {
+        instance.reflowNetwork(instance);
         this.setState(prev => ({ ...prev, SelectedNode: { ...prev.SelectedNode, nodeName: undefined } }));
         return <></>;
       }
@@ -165,6 +207,7 @@ class App extends Component<{}, State> {
     }
 
     function swapDirection() {
+      instance.reflowNetwork(instance);
       instance.setState(old => ({
         ...old,
         SelectedNode: {
@@ -176,7 +219,11 @@ class App extends Component<{}, State> {
 
     function deleteClicked(file: string, instance: App) {
       return function () {
-        instance.setState(old => ({ ...old, Files: old.Files.filter(f => f.path.raw !== file) }));
+        instance.reflowNetwork(instance);
+        instance.setState(old => ({
+          ...old,
+          Files: old.Files.filter(f => f.path.raw !== file)
+        }))
       }
     }
 
@@ -189,13 +236,16 @@ class App extends Component<{}, State> {
           sortMethod: 'directed'
         };
       }
+      instance.reflowNetwork(instance);
       instance.setState(old => ({ ...old, Hierarchical: VisOptions.layout.hierarchical }));
     }
 
     function getTargetFramework(file: FilesMapType) {
       const propertyGroups = file.Parsed.Project.PropertyGroup;
 
-      return propertyGroups.map(p => p.TargetFramework)
+      return propertyGroups
+        .map(p => p.TargetFramework)
+        .concat(propertyGroups.map(p => p.TargetFrameworkVersion))
         .flat(1)
         .concat(propertyGroups.map(p => p.TargetFrameworks).flat(1))
         .filter(t => t)
@@ -207,6 +257,7 @@ class App extends Component<{}, State> {
     function renderControlCell(instance: App) {
       function setNodeName(name?: string) {
         return function () {
+          instance.reflowNetwork(instance);
           instance.setState(prev => ({
             ...prev,
             SelectedNode: {
@@ -237,7 +288,9 @@ class App extends Component<{}, State> {
       }
     }
 
-    const tableData = new TableData(filesMap)
+    const filterText = instance.state.FilterText;
+
+    const tableData = new TableData(filesMap.filter(f => !filterText || filterText.length === 0 || f.path.name.indexOf(filterText) !== -1 || f.path.dir.indexOf(filterText) !== -1))
       .AddSortableColumn("Project", f => f.path.name, (a, b) => a.path.name.localeCompare(b.path.name))
       .AddSortableColumn("Path", f => f.path.dir, (a, b) => a.path.dir.localeCompare(b.path.dir))
       .AddColumn("Framework version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
@@ -249,6 +302,11 @@ class App extends Component<{}, State> {
 
     function shouldShow(value: boolean): 'hidden' | '' {
       return value ? '' : 'hidden';
+    }
+
+    function filterTable(event: ChangeEvent<HTMLInputElement>) {
+      const text = event.currentTarget.value;
+      instance.setState(prev => ({ ...prev, FilterText: text }));
     }
 
     return <>
@@ -265,6 +323,7 @@ class App extends Component<{}, State> {
         <button className={shouldShow(instance.state.ShowGraph && instance.state.SelectedNode.nodeName !== undefined)} onClick={swapDirection}>{instance.state.SelectedNode.direction === 'up' ? 'Show dependencies' : 'Show dependants'}</button>
       </nav>
       <div className={'graph ' + shouldShow(instance.state.ShowGraph)} ref={r => instance.graphElem = r}></div>
+      <input placeholder="Search for a project" className={'text-input ' + shouldShow(!instance.state.ShowGraph)} type="text" onChange={filterTable} />
       <Table className={shouldShow(!instance.state.ShowGraph)} {...tableData} />
     </>
   }

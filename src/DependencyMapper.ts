@@ -14,6 +14,7 @@ export interface ProjectFile {
         }>;
         PropertyGroup: Array<{
             OutputType: string[];
+            TargetFrameworkVersion: string[];
             TargetFramework: string[];
             TargetFrameworks: string[];
         }>;
