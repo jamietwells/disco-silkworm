@@ -290,14 +290,37 @@ class App extends Component<{}, State> {
 
     const filterText = instance.state.FilterText;
 
+    function FindTopLevelReferences(file: FilesMapType, files: FilesMapType[]) {
+      const filesMap: { [rawFilePath: string]: FilesMapType } = {};
+      for (const f of files)
+        filesMap[f.path.raw] = f;
+
+      function inner(file: FilesMapType): FilesMapType[] {
+        const nextArr = file.ReferencedBy.map(f => filesMap[f.path.raw]);
+        const topLevel = nextArr.filter(r => r.ReferencedBy.length === 0);
+        const next = nextArr
+          .filter(r => r.ReferencedBy.length !== 0)
+          .map(n => inner(n))
+          .flat()
+          .filter(n => topLevel.map(t => t.path.raw).indexOf(n.path.raw) === -1);
+
+        return topLevel.concat(next);
+      };
+
+      return inner(file);
+
+    }
+
     const tableData = new TableData(filesMap.filter(f => !filterText || filterText.length === 0 || f.path.name.indexOf(filterText) !== -1 || f.path.dir.indexOf(filterText) !== -1))
       .AddSortableColumn("Project", f => f.path.name, (a, b) => a.path.name.localeCompare(b.path.name))
       .AddSortableColumn("Path", f => f.path.dir, (a, b) => a.path.dir.localeCompare(b.path.dir))
       .AddColumn("Framework version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
       .AddColumn("References", f => <ul>{f.References.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of references", f => f.References.length)
+      // .AddColumn("Lowest Level Reference", f => <ul>{FindLowestLevelReferences(f, filesMap).map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddColumn("Referenced by", f => <ul>{f.ReferencedBy.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of times referenced", f => f.ReferencedBy.length)
+      .AddColumn("Top Level Dependant", f => <ul>{FindTopLevelReferences(f, filesMap).map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddColumn("Graph controls", renderControlCell(this));
 
     function shouldShow(value: boolean): 'hidden' | '' {
