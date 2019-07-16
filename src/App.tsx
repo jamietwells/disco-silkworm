@@ -91,6 +91,16 @@ class App extends Component<{}, State> {
         network.focus(n.id);
       }
 
+      network.on("dragEnd", function (params) {
+        if (params.nodes.length === 0 || !VisOptions.physics.enabled)
+          return;
+
+        const id = params.nodes[0] as string;
+        const node = instance.model!.nodes.filter(n => n.id === id)[0];
+        const position = network.getPositions(id);
+        data.nodes.update({...node, physics: false, ...position });
+      });
+      
       network.on("doubleClick", function (params) {
         instance.reflowNetwork(instance);
         instance.setState(prev => ({
