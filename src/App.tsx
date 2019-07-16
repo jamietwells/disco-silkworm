@@ -274,7 +274,7 @@ class App extends Component<{}, State> {
             Delete
         </span>
           <span
-            hidden={instance.state.SelectedNode.nodeName !== undefined}
+            hidden={f.path.raw === instance.state.SelectedNode.nodeName}
             className='focus-button  button' onClick={setNodeName(f.path.raw)}>
             Focus
         </span>
