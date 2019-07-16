@@ -1,5 +1,5 @@
 import React, { Component, ChangeEvent } from 'react';
-import { Network, DataSet, Edge, Node } from 'vis';
+import { Network, DataSet, Edge, Node, Options } from 'vis';
 import { parseString } from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
@@ -57,7 +57,13 @@ class App extends Component<{}, State> {
         edges: new DataSet<Edge>(instance.model.edges)
       };
       const network = new Network(instance.graphElem, data, (window as any).visOptions);
-
+      if (!(window as any).SetOptions) {
+        (window as any).SetOptions = function (options?: Options) {
+          if (options)
+            network.setOptions(options);
+          network.setOptions((window as any).visOptions);
+        }
+      }
       const delayBetweenNodes = 100;
       (<T,>(items: T[], callback: (item: T) => void) => {
         const [head, ...tail] = items;
@@ -311,13 +317,13 @@ class App extends Component<{}, State> {
 
     }
 
-    function sortBooleans<T>(projection: (input: T) => boolean){
-      return function(first: T, second: T){
+    function sortBooleans<T>(projection: (input: T) => boolean) {
+      return function (first: T, second: T) {
         const a = projection(first);
         const b = projection(second);
-        if((a && b ) || (!a && !b))
+        if ((a && b) || (!a && !b))
           return 0;
-        if(a)
+        if (a)
           return 1;
         return 0;
       }
