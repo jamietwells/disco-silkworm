@@ -311,9 +311,22 @@ class App extends Component<{}, State> {
 
     }
 
+    function sortBooleans<T>(projection: (input: T) => boolean){
+      return function(first: T, second: T){
+        const a = projection(first);
+        const b = projection(second);
+        if((a && b ) || (!a && !b))
+          return 0;
+        if(a)
+          return 1;
+        return 0;
+      }
+    }
+
     const tableData = new TableData(filesMap.filter(f => !filterText || filterText.length === 0 || f.path.name.indexOf(filterText) !== -1 || f.path.dir.indexOf(filterText) !== -1))
       .AddSortableColumn("Project", f => f.path.name, (a, b) => a.path.name.localeCompare(b.path.name))
       .AddSortableColumn("Path", f => f.path.dir, (a, b) => a.path.dir.localeCompare(b.path.dir))
+      .AddSortableColumn("Top Level", f => <p>{f.ReferencedBy.length === 0 ? 'Yes' : 'No'}</p>, sortBooleans(f => f.ReferencedBy.length === 0))
       .AddColumn("Framework version", f => <ul>{getTargetFramework(f).map((t, i) => <li key={i}>{t}</li>)}</ul>)
       .AddColumn("References", f => <ul>{f.References.map(r => <li key={r.path.raw}>{r.path.name}</li>)}</ul>)
       .AddSortableColumn("Number of references", f => f.References.length)
