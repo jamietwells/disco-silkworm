@@ -368,7 +368,7 @@ class App extends Component<{}, State> {
             <Logo className="github-icon" />
           </a>
         </span>
-        <a href="https://glitch.com/edit/#!/disco-silkworm"><button>Made with Glitch</button></a>
+        <a href="https://netlify.com"><button>Hosted on Netlify</button></a>
         <ReadFiles onLoad={onLoad} accept={instance.accept}>Import project files</ReadFiles>
         <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? 'Show table' : 'Show graph'}</button>
         <button className={shouldShow(instance.state.ShowGraph)} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'Web layout' : 'Hierarchical'}</button>
