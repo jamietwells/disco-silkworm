@@ -20,6 +20,8 @@ type Props = {
     accept: string[];
     className?: string;
     id?: string;
+    onBeginLoad?: () => void;
+    onPartialLoad?: (current: number, total: number) => void;
 };
 
 function parsePath(path: string): FilePath {
@@ -59,6 +61,10 @@ export const ReadFiles = (props: Props) => {
                     path: file.path,
                     content: (reader.result as string)
                 });
+                
+                if(props.onPartialLoad)
+                    props.onPartialLoad(results.length, length);
+
                 if (length === results.length)
                     props.onLoad(results);
             };
@@ -66,6 +72,8 @@ export const ReadFiles = (props: Props) => {
 
         if (!event.currentTarget.files)
             return;
+        if(props.onBeginLoad)
+            props.onBeginLoad();
 
         const files = function () {
             const results: File[] = [];

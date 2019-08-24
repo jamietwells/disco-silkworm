@@ -1,5 +1,5 @@
 import React, { Component, ChangeEvent } from 'react';
-import { Network, DataSet, Edge, Node, Options } from 'vis';
+import { Network, Edge, Node } from 'vis-network';
 import { parseString } from 'xml2js'
 import './App.css';
 import { VisOptions } from './VisOptions';
@@ -7,6 +7,7 @@ import { ReadFiles, FileResult } from './ReadFiles';
 import { Table, TableData } from './Table';
 import { FileInfo, ProjectFile, ToDependencyMap, FilesMapType } from './DependencyMapper';
 import { ReactComponent as Logo } from './assets/github-icon-dark.svg';
+import { IStatusHandler, StatusIndicator } from './Status';
 
 type State = {
   Files: FileInfo[],
@@ -16,13 +17,12 @@ type State = {
   FilterText?: string
 }
 
-type IdLabelType = { id: string, label: string };
-
 class App extends Component<{}, State> {
 
   readonly accept: string[];
   graphElem: HTMLElement | null;
-  model: { nodes: IdLabelType[], edges: Array<{ from: string, to: string }> } | null;
+  model: { nodes: Node[], edges: Edge[] };
+  statusHandler: IStatusHandler;
 
   constructor(props: {}) {
     super(props);
@@ -36,7 +36,11 @@ class App extends Component<{}, State> {
     };
     this.accept = ['.csproj', '.fsproj', '.proj', '.vbproj']
     this.graphElem = null;
-    this.model = null;
+    this.model = { nodes: [], edges: [] };
+    this.statusHandler = {
+      setMessage: () => { },
+      clear: () => { },
+    }
   }
 
   reflowNetwork(instance: App) {
@@ -46,68 +50,27 @@ class App extends Component<{}, State> {
     }
 
     function reflowNetworkInner() {
-      if (!instance.graphElem || !instance.model)
-        return;
-
-      if (!(window as any).visOptions)
-        (window as any).visOptions = VisOptions;
+      if (!instance.graphElem)
+      return;
+      
+      instance.statusHandler.setMessage("Reflowing network...");
 
       const data = {
-        nodes: new DataSet<Node>(),
-        edges: new DataSet<Edge>(instance.model.edges)
+        nodes: instance.model.nodes,
+        edges: instance.model.edges
       };
-      const network = new Network(instance.graphElem, data, (window as any).visOptions);
-      if (!(window as any).SetOptions) {
-        (window as any).SetOptions = function (options?: Options) {
-          if (options)
-            network.setOptions(options);
-          network.setOptions((window as any).visOptions);
-        }
-      }
-      const delayBetweenNodes = 100;
-      (<T,>(items: T[], callback: (item: T) => void) => {
-        const [head, ...tail] = items;
-        performActionOnDelay(head, tail);
 
-        function performActionOnDelay(head: T, tail: T[]) {
-          if (!head)
-            return;
+      const network = new Network(instance.graphElem, data, VisOptions);
 
-          function callbackInner() {
-            const [nextHead, ...nextTail] = tail;
-            performActionOnDelay(nextHead, nextTail);
-          }
+      instance.statusHandler.clear();
 
-          setTimeout(callbackInner, delayBetweenNodes);
-          callback(head);
-        }
-      })(instance.model.nodes, callback);
-
-      function callback(n: IdLabelType) {
-        function randomPosition() {
-          return ((Math.random() - 0.5) * 10);
-        }
-        data.nodes.update({ ...n, x: randomPosition(), y: randomPosition() });
-        network.focus(n.id);
-      }
-
-      network.on("dragEnd", function (params) {
-        if (params.nodes.length === 0 || !VisOptions.physics.enabled)
-          return;
-
-        const id = params.nodes[0] as string;
-        const node = instance.model!.nodes.filter(n => n.id === id)[0];
-        const position = network.getPositions(id);
-        data.nodes.update({...node, physics: false, ...position });
-      });
-      
-      network.on("doubleClick", function (params) {
+      network.on("doubleClick", function (params: { nodes: string[] }) {
         instance.reflowNetwork(instance);
         instance.setState(prev => ({
           ...prev,
           SelectedNode: {
             ...prev.SelectedNode,
-            nodeName: (params.nodes as string[])[0]
+            nodeName: params.nodes[0]
           }
         }));
       });
@@ -151,6 +114,8 @@ class App extends Component<{}, State> {
               ...old,
               Files: old.Files.filter(notAlreadyAdded).concat(results)
             }));
+
+            instance.statusHandler.clear();
           }
         }
         parseString(file.content, onParsed);
@@ -158,7 +123,7 @@ class App extends Component<{}, State> {
       files.forEach(toXml);
     };
 
-    const filesMap = ToDependencyMap(this.state.Files);
+    const filesMap = ToDependencyMap(this.state.Files, instance.statusHandler);
 
     function mapEdges(f: FilesMapType) {
       function mapReferences(r: FileInfo) {
@@ -369,10 +334,11 @@ class App extends Component<{}, State> {
           </a>
         </span>
         <a href="https://netlify.com"><button>Hosted on Netlify</button></a>
-        <ReadFiles onLoad={onLoad} accept={instance.accept}>Import project files</ReadFiles>
+        <ReadFiles onLoad={onLoad} accept={instance.accept} onBeginLoad={() => instance.statusHandler.setMessage("Loading files")} onPartialLoad={(current, total) => instance.statusHandler.setMessage(`Loading file ${current} of ${total}`)}>Import project files</ReadFiles>
         <button onClick={graphTableToggleClicked}>{instance.state.ShowGraph ? 'Show table' : 'Show graph'}</button>
         <button className={shouldShow(instance.state.ShowGraph)} onClick={hierarchicalClicked}>{VisOptions.layout.hierarchical ? 'Web layout' : 'Hierarchical'}</button>
         <button className={shouldShow(instance.state.ShowGraph && instance.state.SelectedNode.nodeName !== undefined)} onClick={swapDirection}>{instance.state.SelectedNode.direction === 'up' ? 'Show dependencies' : 'Show dependants'}</button>
+        <StatusIndicator assignHandler={h => instance.statusHandler = h} />
       </nav>
       <div className={'graph ' + shouldShow(instance.state.ShowGraph)} ref={r => instance.graphElem = r}></div>
       <input placeholder="Search for a project" className={'text-input ' + shouldShow(!instance.state.ShowGraph)} type="text" onChange={filterTable} />

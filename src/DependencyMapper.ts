@@ -1,4 +1,5 @@
 import { FileResult } from "./ReadFiles";
+import { IStatusHandler } from "./Status";
 
 export interface ProjectFile {
     Project: {
@@ -35,7 +36,7 @@ export interface FileInfo extends FileResult {
     Parsed: ProjectFile
 }
 
-export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
+export function ToDependencyMap(files: FileInfo[], statusHandler: IStatusHandler): FilesMapType[] {
     function searchForFile(path: string) {
         const matchingFiles = files
             .filter(f => f.path.isSubPathFor(path.split('\\').filter(p => p !== '..')));
@@ -50,7 +51,8 @@ export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
         if (!file.Parsed.Project.ItemGroup)
             return [];
 
-        return file
+        statusHandler.setMessage("Finding dependencies")
+        var result = file
             .Parsed
             .Project
             .ItemGroup
@@ -62,10 +64,18 @@ export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
             .map(searchForFile)
             .filter(f => f)
             .map(f => f as FileInfo);
+
+        statusHandler.clear();
+        return result;
     }
 
     const filesMap = files
         .map(f => ({ ...f, References: findDependencies(f) } as FileReferences));
+
+    const count = {
+        current: 1,
+        total: filesMap.length
+    }
 
     function findDependants(file: FileReferences): FileInfo[] {
         function ReferenceTheInputFile(current: FileReferences) {
@@ -74,10 +84,15 @@ export function ToDependencyMap(files: FileInfo[]): FilesMapType[] {
                 .some(r => r.path.isSubPathFor(file.path.raw.split('/')));
         }
 
+        statusHandler.setMessage(`Finding dependants for ${file.name} ${count.current++} of ${count.total}`)
         return filesMap
             .filter(ReferenceTheInputFile);
     }
 
-    return filesMap
+    var result = filesMap
         .map(f => ({ ...f, ReferencedBy: findDependants(f) }));
+    
+    statusHandler.clear()
+
+    return result;
 }
