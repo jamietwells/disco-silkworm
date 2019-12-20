@@ -61,8 +61,8 @@ export const ReadFiles = (props: Props) => {
                     path: file.path,
                     content: (reader.result as string)
                 });
-                
-                if(props.onPartialLoad)
+
+                if (props.onPartialLoad)
                     props.onPartialLoad(results.length, length);
 
                 if (length === results.length)
@@ -72,7 +72,7 @@ export const ReadFiles = (props: Props) => {
 
         if (!event.currentTarget.files)
             return;
-        if(props.onBeginLoad)
+        if (props.onBeginLoad)
             props.onBeginLoad();
 
         const files = function () {
@@ -109,11 +109,13 @@ export const ReadFiles = (props: Props) => {
         className: 'input-file hidden'
     };
 
+    function onClick(){
+        if (inputElement)
+            (inputElement).click();
+    }
+
     return <>
         <input {...inputAttributes} ref={input => inputElement = input} />
-        <button id={props.id} className={props.className} onClick={() => {
-            if (inputElement)
-                (inputElement).click();
-        }}>{props.children}</button>
+        <button id={props.id} className={props.className} onClick={onClick}>{props.children}</button>
     </>;
 };
