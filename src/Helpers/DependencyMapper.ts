@@ -1,4 +1,4 @@
-import { FileResult } from "./Components/ReadFiles/ReadFiles";
+import { FileResult } from "../Components/ReadFiles/ReadFiles";
 import { parseString } from "xml2js";
 
 export interface ProjectFile {
@@ -30,7 +30,7 @@ export interface FilesMapType extends FileReferences {
     ReferencedBy: FileInfo[]
 };
 
-interface FileInfo extends FileResult {
+export interface FileInfo extends FileResult {
     Xml: string,
     Parsed: ProjectFile
 }

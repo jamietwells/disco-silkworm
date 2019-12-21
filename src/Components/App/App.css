@@ -35,3 +35,16 @@ html{
   background-color: black;
   color: #F0F0FF;
 }
+
+.github-icon{
+  display: inline-block;
+  margin: 4px;
+  width: 32px;
+  height: 32px;
+  background-color: #000000;
+}
+
+.icon-row{
+  display: flex;
+  flex-direction: row;
+}

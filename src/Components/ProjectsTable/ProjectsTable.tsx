@@ -1,5 +1,5 @@
 import React from 'react';
-import { FilesMapType } from '../../DependencyMapper';
+import { FilesMapType } from '../../Helpers/DependencyMapper';
 import { Table, TableColumn } from '../Table/Table';
 
 export default function ProjectsTable(props: {files: FilesMapType[]}) {

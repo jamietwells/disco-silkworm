@@ -1,31 +1,39 @@
-table{
-    width: 100%;
-  }
-  
+table {
+  width: 100%;
+}
+
 table thead tr {
-    background-color: #101010;
-  }
-  
-  table tbody tr {
-    background-color: #202020;
-  }
-  
-  table thead tr th {
-    padding: 10px;
-    padding-top: 20px;
-    padding-bottom: 20px;
-  }
-  
-  table tbody tr td {
-    padding: 10px;
-  }
-  
-  thead{
-    font-weight: bold;
-  }
-  
-  ul {
-    list-style: none;
-    padding: 0;
-  }
-  
+  background-color: #101010;
+}
+
+table tbody tr {
+  background-color: #202020;
+}
+
+table thead tr th {
+  padding: 10px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+
+table tbody tr td {
+  padding: 10px;
+}
+
+thead{
+  font-weight: bold;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+.column-sort-btn {
+  border-radius: 20%;
+  min-width: 25px;
+  min-height: 25px;
+  padding: 0px;
+  margin: 0px;
+  margin-left: 5px;
+}  
