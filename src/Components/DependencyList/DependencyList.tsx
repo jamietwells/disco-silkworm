@@ -1,6 +1,7 @@
 import React from 'react';
 import { FilesMapType } from '../../Helpers/DependencyMapper';
 import { ToDictionary } from '../../Helpers/helpers';
+import './DependencyList.css';
 
 export function DependencyList(props: { files: FilesMapType[] }) {
     const rootFiles = props.files
